@@ -1,7 +1,9 @@
 from datetime import datetime
+from json import dumps
 from time import sleep
 from Queue import Queue, Empty
 from threading import Lock, Thread
+from google.cloud import pubsub_v1
 from google.cloud.bigquery import Client as BigQuery
 
 
@@ -92,3 +94,26 @@ class BigQueryWorker(object):
             # self.q.put_nowait(self._end)
         finally:
             self.lock.release()
+
+
+class PubSubWorker(object):
+    def __init__(self, project, topic):
+        self.project = project
+        self.topic = topic
+        self.client = None
+
+    def _start(self):
+        if self.client is not None:
+            return
+
+        batch_settings = pubsub_v1.types.BatchSettings(
+            max_bytes=1024*1024*5,
+            max_latency=0.05,
+            max_messages=1000,
+        )
+        self.client = pubsub_v1.PublisherClient(batch_settings)
+        self.topic_path = self.client.topic_path(self.project, self.topic)
+
+    def publish(self, row):
+        self._start()
+        self.client.publish(self.topic_path, dumps(row))

@@ -4,15 +4,14 @@ import time
 
 from base64 import b64encode
 from datetime import datetime
-from google.cloud import pubsub_v1
-from json import load, dumps
+from json import load
 from werkzeug.wrappers import Response
 from uuid import uuid1
 
 from .events import VALID_EVENTS
 from .raven_client import client
 from .router import Router
-from .worker import BigQueryWorker
+from .worker import BigQueryWorker, PubSubWorker
 from .utils import format_datetime, ip_from_request
 
 COMMON_FIELDS = ('url', 'referrer', 'title', 'path', 'search', 'anonymous_id', 'user_id')
@@ -49,14 +48,7 @@ class App(Router):
         super(App, self).__init__()
 
         self.worker = BigQueryWorker(dataset, table, flush_interval=1)
-
-        batch_settings = pubsub_v1.types.BatchSettings(
-            max_bytes=1024*1024*5,
-            max_latency=0.05,
-            max_messages=1000,
-        )
-        self.publisher = pubsub_v1.PublisherClient(batch_settings)
-        self.topic = self.publisher.topic_path(pubsub_project, pubsub_topic)
+        self.publisher = PubSubWorker(pubsub_project, pubsub_topic)
 
     # TODO(adhiraj): Put pageviews in the events table.
     # TODO(adhiraj): This really needs a refactoring.
@@ -173,7 +165,7 @@ class App(Router):
             'type': EVENT_NAME_TEMPLATE % data['event_name'],
             'data': clean_data,
         }
-        self.publisher.publish(self.topic, data=dumps(row))
+        self.publisher.publish(row)
 
         return ok_response()
 

@@ -57,7 +57,7 @@ class AppTests(TestCase):
         resp = self.client.post('/event/', data=json.dumps(sent_data))
         assert resp.status_code == 201
         assert self.mock_publisher.publish.call_count == 1
-        row = json.loads(self.mock_publisher.publish.call_args[1]['data'])
+        row = json.loads(self.mock_publisher.publish.call_args[0][1])
         # Make sure the UUID format is valid.
         UUID(bytes=b64decode(row['uuid']))
         for key in ('timestamp', 'type', 'data'):
