@@ -1,4 +1,4 @@
-Werkzeug==0.15.2
+Werkzeug==0.15.3
 datadog==0.28.0
 google-cloud-bigquery==1.11.2
 google-cloud-pubsub==0.40.0
